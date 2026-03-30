@@ -71,7 +71,7 @@ install_additional_packages() {
         else
             echo "  [i] Installing additional packages: ${ADDITIONAL_PACKAGES}."
             # shellcheck disable=SC2086
-            if ! apk add --no-cache ${ADDITIONAL_PACKAGES}; then
+            if ! apk add --no-cache "${ADDITIONAL_PACKAGES}"; then
                 echo "  [i] Failed to install additional packages."
             fi
         fi
@@ -180,7 +180,9 @@ migrate_v5_configs() {
     # Print the output of the FTL migration prefacing every line with six
     # spaces for alignment with other container output. Replace the first line to match the style of the other messages
     # We suppress the message about environment variables as these will be set on FTL's first real start
-    printf "%b" "${FTLoutput}\\n" | sed 's/^/      /' | sed 's/      Migrating config to Pi-hole v6.0 format/  [i] Migrating config to Pi-hole v6.0 format/' | sed 's/- 0 entries are forced through environment//'
+    printf "%b" "${FTLoutput}\\n" | sed -e 's/^/      /' \
+                                        -e 's/      Migrating config to Pi-hole v6.0 format/  [i] Migrating config to Pi-hole v6.0 format/' \
+                                        -e 's/- 0 entries are forced through environment//'
 
     # Print a blank line for separation
     echo ""
@@ -202,12 +204,12 @@ setup_web_password() {
             # If we are here, the password is set in neither the environment nor the config file
             # We will generate a random password.
             RANDOMPASSWORD=$(tr -dc _A-Z-a-z-0-9 </dev/urandom | head -c 8)
-            echo "  [i] No password set in environment or config file, assigning random password: $RANDOMPASSWORD"
+            echo "  [i] No password set in environment or config file, assigning random password: ${RANDOMPASSWORD}"
 
             # Explicitly turn off bash printing when working with secrets
             { set +x; } 2>/dev/null
 
-            pihole-FTL --config webserver.api.password "$RANDOMPASSWORD" >/dev/null
+            pihole-FTL --config webserver.api.password "${RANDOMPASSWORD}" >/dev/null
 
             # To avoid printing this if conditional in bash debug, turn off  debug above..
             # then re-enable debug if necessary (more code but cleaner printed output)
@@ -242,14 +244,14 @@ fix_capabilities() {
 
         setcap "${CAP_STR:1}"+ep "$(which pihole-FTL)" || ret=$?
 
-        if [[ $DHCP_READY == false ]] && [[ $FTLCONF_dhcp_active == true ]]; then
+        if [[ "${DHCP_READY}" == false ]] && [[ "${FTLCONF_dhcp_active}" == true ]]; then
             # DHCP is requested but NET_ADMIN is not available.
             echo "ERROR: DHCP requested but NET_ADMIN is not available. DHCP will not be started."
             echo "      Please add cap_net_admin to the container's capabilities or disable DHCP."
             setFTLConfigValue dhcp.active false
         fi
 
-        if [[ $ret -ne 0 && "${DNSMASQ_USER:-pihole}" != "root" ]]; then
+        if [[ "${ret}" -ne 0 && "${DNSMASQ_USER:-pihole}" != "root" ]]; then
             echo "  [!] ERROR: Unable to set capabilities for pihole-FTL. Cannot run as non-root."
             echo "            If you are seeing this error, please set the environment variable 'DNSMASQ_USER' to the value 'root'"
             exit 1

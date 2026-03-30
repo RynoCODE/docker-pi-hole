@@ -61,6 +61,12 @@ start() {
     # Get the FTL log file path from the config
     FTLlogFile=$(getFTLConfigValue files.log.ftl)
 
+    # Ensure log file exists before stat
+    if [ ! -f "${FTLlogFile}" ]; then
+        touch "${FTLlogFile}"
+        chown pihole:pihole "${FTLlogFile}"
+    fi
+
     # Get the EOF position of the FTL log file so that we can tail from there later.
     local startFrom
     startFrom=$(stat -c%s "${FTLlogFile}")
@@ -98,14 +104,14 @@ start() {
     fi
 
     # Wait for the capsh process (which spawned FTL) to finish
-    wait $CAPSH_PID
+    wait "${CAPSH_PID}"
     FTL_EXIT_CODE=$?
 
     # If we are here, then FTL has exited.
     # If the trap was triggered, then stop will have already been called
-    if [ $TRAP_TRIGGERED -eq 0 ]; then
+    if [ "${TRAP_TRIGGERED}" -eq 0 ]; then
         # Pass the exit code through to the stop function
-        stop $FTL_EXIT_CODE
+        stop "${FTL_EXIT_CODE}"
     fi
 }
 
@@ -121,7 +127,7 @@ stop() {
         echo ""
         killall --signal 15 pihole-FTL
 
-        wait $CAPSH_PID
+        wait "${CAPSH_PID}"
         FTL_EXIT_CODE=$?
     fi
 
